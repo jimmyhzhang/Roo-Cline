@@ -116,11 +116,13 @@ export interface ClineSayTool {
 		| "listFilesRecursive"
 		| "listCodeDefinitionNames"
 		| "searchFiles"
+		| "webSearch"
 	path?: string
 	diff?: string
 	content?: string
 	regex?: string
 	filePattern?: string
+	query?: string
 }
 
 // must keep in sync with system prompt

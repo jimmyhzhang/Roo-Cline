@@ -21,6 +21,7 @@ export const toolUseNames = [
 	"access_mcp_resource",
 	"ask_followup_question",
 	"attempt_completion",
+	"web_search",
 ] as const
 
 // Converts array of tool call names into a union type ("execute_command" | "read_file" | ...)
@@ -47,6 +48,10 @@ export const toolParamNames = [
 	"diff",
 	"start_line",
 	"end_line",
+	"query",
+	"search_domains",
+	"search_recency",
+	"return_images",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -113,4 +118,9 @@ export interface AskFollowupQuestionToolUse extends ToolUse {
 export interface AttemptCompletionToolUse extends ToolUse {
 	name: "attempt_completion"
 	params: Partial<Pick<Record<ToolParamName, string>, "result" | "command">>
+}
+
+export interface WebSearchToolUse extends ToolUse {
+	name: "web_search"
+	params: Partial<Pick<Record<ToolParamName, string>, "query" | "search_domains" | "search_recency" | "return_images">>
 }

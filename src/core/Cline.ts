@@ -18,6 +18,7 @@ import { UrlContentFetcher } from "../services/browser/UrlContentFetcher"
 import { listFiles } from "../services/glob/list-files"
 import { regexSearchFiles } from "../services/ripgrep"
 import { parseSourceCodeForDefinitionsTopLevel } from "../services/tree-sitter"
+import { PerplexityClient } from "../services/perplexity/PerplexityClient"
 import { ApiConfiguration } from "../shared/api"
 import { findLastIndex } from "../shared/array"
 import { combineApiRequests } from "../shared/combineApiRequests"
@@ -65,6 +66,7 @@ export class Cline {
 	private terminalManager: TerminalManager
 	private urlContentFetcher: UrlContentFetcher
 	private browserSession: BrowserSession
+	private perplexityClient: PerplexityClient
 	private didEditFile: boolean = false
 	customInstructions?: string
 	diffStrategy?: DiffStrategy
@@ -110,6 +112,7 @@ export class Cline {
 		this.terminalManager = new TerminalManager()
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
+		this.perplexityClient = new PerplexityClient()
 		this.diffViewProvider = new DiffViewProvider(cwd)
 		this.customInstructions = customInstructions
 		this.diffEnabled = enableDiff ?? false
@@ -938,6 +941,8 @@ export class Cline {
 							return `[${block.name} for '${block.params.question}']`
 						case "attempt_completion":
 							return `[${block.name}]`
+						case "web_search":
+							return `[${block.name} for '${block.params.query}']`
 					}
 				}
 
@@ -2008,6 +2013,52 @@ export class Cline {
 							}
 						} catch (error) {
 							await handleError("inspecting site", error)
+							break
+						}
+					}
+					case "web_search": {
+						const query: string | undefined = block.params.query
+						const searchDomains: string[] | undefined = block.params.search_domains ? JSON.parse(block.params.search_domains) : undefined
+						const searchRecency: "month" | "week" | "day" | "hour" | undefined = block.params.search_recency as "month" | "week" | "day" | "hour" | undefined
+						const returnImages: boolean | undefined = block.params.return_images === "true"
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "webSearch",
+									query: removeClosingTag("query", query),
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!query) {
+									this.consecutiveMistakeCount++
+									pushToolResult(await this.sayAndCreateMissingParamError("web_search", "query"))
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "webSearch",
+									query,
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const searchResult = await this.perplexityClient.search(query, {
+									searchDomains,
+									searchRecency,
+									returnImages,
+								})
+
+								pushToolResult(formatResponse.toolResult(searchResult))
+								break
+							}
+						} catch (error) {
+							await handleError("performing web search", error)
 							break
 						}
 					}
