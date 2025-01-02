@@ -117,12 +117,14 @@ export interface ClineSayTool {
 		| "listCodeDefinitionNames"
 		| "searchFiles"
 		| "webSearch"
+		| "fetchFinancialData"
 	path?: string
 	diff?: string
 	content?: string
 	regex?: string
 	filePattern?: string
 	query?: string
+	symbols?: string
 }
 
 // must keep in sync with system prompt

@@ -182,6 +182,21 @@ Usage:
 <return_images>true</return_images>
 </web_search>
 
+## fetch_financial_data
+Description: Fetch financial market data using the MarketStack API. This tool provides access to real-time and historical stock prices, ETF holdings, and other financial data. The data is returned in a formatted string with clear labels for each value.
+Parameters:
+- symbols: (required) The stock symbols to fetch data for (e.g. "AAPL,MSFT").
+- exchange: (optional) Filter results by stock exchange (e.g. "NASDAQ").
+- date_from: (optional) Start date for historical data in YYYY-MM-DD format.
+- date_to: (optional) End date for historical data in YYYY-MM-DD format.
+Usage:
+<fetch_financial_data>
+<symbols>AAPL,MSFT</symbols>
+<exchange>NASDAQ</exchange>
+<date_from>2024-01-01</date_from>
+<date_to>2024-03-20</date_to>
+</fetch_financial_data>
+
 ## ask_followup_question
 Description: Ask the user a question to gather additional information needed to complete the task. This tool should be used when you encounter ambiguities, need clarification, or require more details to proceed effectively. It allows for interactive problem-solving by enabling direct communication with the user. Use this tool judiciously to maintain a balance between gathering necessary information and avoiding excessive back-and-forth.
 Parameters:

@@ -51,6 +51,7 @@ import { ClineProvider, GlobalFileNames } from "./webview/ClineProvider"
 import { detectCodeOmission } from "../integrations/editor/detect-omission"
 import { BrowserSession } from "../services/browser/BrowserSession"
 import { OpenRouterHandler } from "../api/providers/openrouter"
+import { MarketStackClient } from "../services/marketstack/MarketStackClient"
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -943,6 +944,8 @@ export class Cline {
 							return `[${block.name}]`
 						case "web_search":
 							return `[${block.name} for '${block.params.query}']`
+						case "fetch_financial_data":
+							return `[${block.name} for '${block.params.symbols}']`
 					}
 				}
 
@@ -2059,6 +2062,54 @@ export class Cline {
 							}
 						} catch (error) {
 							await handleError("performing web search", error)
+							break
+						}
+					}
+					case "fetch_financial_data": {
+						const symbols: string | undefined = block.params.symbols
+						const exchange: string | undefined = block.params.exchange
+						const dateFrom: string | undefined = block.params.date_from
+						const dateTo: string | undefined = block.params.date_to
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "fetchFinancialData",
+									symbols: removeClosingTag("symbols", symbols),
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!symbols) {
+									this.consecutiveMistakeCount++
+									pushToolResult(await this.sayAndCreateMissingParamError("fetch_financial_data", "symbols"))
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "fetchFinancialData",
+									symbols,
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const marketStackClient = new MarketStackClient(process.env.MARKETSTACK_API_KEY || "")
+								const financialData = await marketStackClient.fetchEodData({
+									symbols,
+									exchange,
+									date_from: dateFrom,
+									date_to: dateTo,
+								})
+
+								pushToolResult(formatResponse.toolResult(financialData))
+								break
+							}
+						} catch (error) {
+							await handleError("fetching financial data", error)
 							break
 						}
 					}
