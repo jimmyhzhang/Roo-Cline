@@ -51,7 +51,7 @@ import { ClineProvider, GlobalFileNames } from "./webview/ClineProvider"
 import { detectCodeOmission } from "../integrations/editor/detect-omission"
 import { BrowserSession } from "../services/browser/BrowserSession"
 import { OpenRouterHandler } from "../api/providers/openrouter"
-import { MarketStackClient } from "../services/marketstack/MarketStackClient"
+import { FinancialModelingPrepClient } from "../services/fmp/FinancialModelingPrepClient"
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -2097,15 +2097,29 @@ export class Cline {
 									break
 								}
 
-								const marketStackClient = new MarketStackClient(process.env.MARKETSTACK_API_KEY || "")
-								const financialData = await marketStackClient.fetchEodData({
-									symbols,
-									exchange,
-									date_from: dateFrom,
-									date_to: dateTo,
-								})
+								const fmpClient = new FinancialModelingPrepClient(
+									process.env.FMP_API_KEY || "FAFIe7OhSVEe0JKy1xMLqoXtGZVJ6Tvt"
+								)
+								
+								// Get company profiles
+								const profiles = await fmpClient.getCompanyProfile(symbols)
+								let output = "=== Company Profiles ===\n" + fmpClient.formatFinancialData([profiles], "Company Profile")
 
-								pushToolResult(formatResponse.toolResult(financialData))
+								// Get financial statements if date range is provided
+								if (dateFrom && dateTo) {
+									const incomeStatements = await fmpClient.getIncomeStatement(symbols)
+									const balanceSheets = await fmpClient.getBalanceSheet(symbols)
+									const cashFlows = await fmpClient.getCashFlow(symbols)
+									const ratios = await fmpClient.getFinancialRatios(symbols)
+
+									output += "\n=== Financial Statements ===\n"
+									output += fmpClient.formatFinancialData(incomeStatements, "Income Statement")
+									output += fmpClient.formatFinancialData(balanceSheets, "Balance Sheet")
+									output += fmpClient.formatFinancialData(cashFlows, "Cash Flow")
+									output += fmpClient.formatFinancialData(ratios, "Financial Ratios")
+								}
+
+								pushToolResult(formatResponse.toolResult(output))
 								break
 							}
 						} catch (error) {

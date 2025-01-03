@@ -485,7 +485,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				return true
 			}
 			const tool = JSON.parse(message.text)
-			return ["readFile", "listFiles", "listFilesTopLevel", "listFilesRecursive", "listCodeDefinitionNames", "searchFiles"].includes(tool.tool)
+			return ["readFile", "listFiles", "listFilesTopLevel", "listFilesRecursive", "listCodeDefinitionNames", "searchFiles", "fetchFinancialData", "webSearch"].includes(tool.tool)
 		}
 		return false
 	}, [])

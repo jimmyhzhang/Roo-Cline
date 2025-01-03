@@ -183,18 +183,18 @@ Usage:
 </web_search>
 
 ## fetch_financial_data
-Description: Fetch financial market data using the MarketStack API. This tool provides access to real-time and historical stock prices, ETF holdings, and other financial data. The data is returned in a formatted string with clear labels for each value.
+Description: Fetch financial market data using the Financial Modeling Prep API. This tool provides access to company information, stock prices, financial statements, and market analysis.
 Parameters:
-- symbols: (required) The stock symbols to fetch data for (e.g. "AAPL,MSFT").
-- exchange: (optional) Filter results by stock exchange (e.g. "NASDAQ").
-- date_from: (optional) Start date for historical data in YYYY-MM-DD format.
-- date_to: (optional) End date for historical data in YYYY-MM-DD format.
+- symbols: (required) Stock symbols to fetch data for (e.g., "AAPL,MSFT")
+- exchange: (optional) Filter results by stock exchange (e.g., "NASDAQ")
+- date_from: (optional) Start date for historical data in YYYY-MM-DD format
+- date_to: (optional) End date for historical data in YYYY-MM-DD format
 Usage:
 <fetch_financial_data>
-<symbols>AAPL,MSFT</symbols>
+<symbols>AAPL</symbols>
 <exchange>NASDAQ</exchange>
 <date_from>2024-01-01</date_from>
-<date_to>2024-03-20</date_to>
+<date_to>2024-03-01</date_to>
 </fetch_financial_data>
 
 ## ask_followup_question
