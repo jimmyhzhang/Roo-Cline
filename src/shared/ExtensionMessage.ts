@@ -118,9 +118,10 @@ export interface ClineSayTool {
 		| "searchFiles"
 		| "webSearch"
 		| "fetchFinancialData"
+		| "analyzeStocks"
 	path?: string
-	diff?: string
 	content?: string
+	diff?: string
 	regex?: string
 	filePattern?: string
 	query?: string

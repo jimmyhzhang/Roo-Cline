@@ -52,6 +52,7 @@ import { detectCodeOmission } from "../integrations/editor/detect-omission"
 import { BrowserSession } from "../services/browser/BrowserSession"
 import { OpenRouterHandler } from "../api/providers/openrouter"
 import { FinancialModelingPrepClient } from "../services/fmp/FinancialModelingPrepClient"
+import { AnalyzeStockClient } from "../services/analyze/AnalyzeStockClient"
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -86,6 +87,7 @@ export class Cline {
 	didFinishAborting = false
 	abandoned = false
 	private diffViewProvider: DiffViewProvider
+	private analyzeStockClient: AnalyzeStockClient
 
 	// streaming
 	private currentStreamingContentIndex = 0
@@ -120,6 +122,7 @@ export class Cline {
 		if (this.diffEnabled && this.api.getModel().id) {
 			this.diffStrategy = getDiffStrategy(this.api.getModel().id, fuzzyMatchThreshold ?? 1.0)
 		}
+		this.analyzeStockClient = new AnalyzeStockClient(cwd, process.env.ANTHROPIC_API_KEY || "")
 		if (historyItem) {
 			this.taskId = historyItem.id
 			this.resumeTaskFromHistory()
@@ -946,6 +949,8 @@ export class Cline {
 							return `[${block.name} for '${block.params.query}']`
 						case "fetch_financial_data":
 							return `[${block.name} for '${block.params.symbols}']`
+						case "analyze_stocks":
+							return `[${block.name} for analysis]`
 					}
 				}
 
@@ -2124,6 +2129,52 @@ export class Cline {
 							}
 						} catch (error) {
 							await handleError("fetching financial data", error)
+							break
+						}
+					}
+					case "analyze_stocks": {
+						const financialData: string | undefined = block.params.financial_data
+						const webSearchData: string | undefined = block.params.web_search_data
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "analyzeStocks",
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!financialData) {
+									this.consecutiveMistakeCount++
+									pushToolResult(await this.sayAndCreateMissingParamError("analyze_stocks", "financial_data"))
+									break
+								}
+								if (!webSearchData) {
+									this.consecutiveMistakeCount++
+									pushToolResult(await this.sayAndCreateMissingParamError("analyze_stocks", "web_search_data"))
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "analyzeStocks",
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const result = await this.analyzeStockClient.analyze(financialData, webSearchData)
+								
+								pushToolResult(formatResponse.toolResult(
+									`Analysis Results:\n\n${result.analysis}\n\nKey Metrics:\n${JSON.stringify(result.metrics, null, 2)}`,
+									result.plots
+								))
+								break
+							}
+						} catch (error) {
+							await handleError("analyzing stocks", error)
 							break
 						}
 					}
