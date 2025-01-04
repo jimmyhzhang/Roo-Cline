@@ -363,36 +363,48 @@ These steps ensure that:
 
 # Scratchpad
 
-## Current Task: Simplify Web Scraper Tool
+## Current Task: Migrate Vector DB from SQLite to LanceDB
 
 ### Steps:
-[X] 1. Remove Scrapingdog API dependency
-   - Remove API key requirement
-   - Remove Scrapingdog-specific options
-   - Add direct HTTP request handling
+[X] 1. Research LanceDB implementation
+   - Found documentation for local deployment
+   - Reviewed initialization, write, and search functionality
+   - Identified necessary dependencies
 
-[X] 2. Enhance WebScraperClient
-   - Add default User-Agent header
-   - Handle relative URLs in links
-   - Add custom headers support
-   - Configure timeout and redirects
+[X] 2. Update package.json
+   - Added @lancedb/lancedb and apache-arrow dependencies
+   - Removed SQLite dependencies
 
-[X] 3. Build and test
-   - Update code to use direct cheerio scraping
-   - Build the extension
-   - Launch for testing
+[X] 3. Update vector_db_utils.ts
+   - Removed SQLite code
+   - Implemented LanceDB connection and schema
+   - Added vector search functionality
+   - Added error handling and logging
 
-### Progress:
-Completed implementation:
-1. Removed Scrapingdog API dependency:
-   - Removed API key and Scrapingdog-specific options
-   - Added direct HTTP request handling with axios
-   - Added proper headers and request configuration
+[X] 4. Update call sites
+   - Updated Cline.ts
+   - Updated api/index.ts
+   - Updated system.ts
+   - Ensured compatibility with new LanceDB implementation
 
-2. Enhanced WebScraperClient functionality:
-   - Added default User-Agent header for better compatibility
-   - Added support for custom headers
-   - Improved link handling with relative to absolute URL conversion
-   - Added timeout and redirect configuration
+[X] 5. Build and test
+   - Fixed esbuild configuration for native modules
+   - Successfully built the extension
+   - Successfully installed the extension
 
-The web_scraper tool now uses cheerio directly to scrape and clean web content, making it simpler and more maintainable without external API dependencies.
+### Next Steps:
+1. Test the extension functionality
+   - Test vector search
+   - Test full-text search
+   - Test hybrid search
+   - Verify error handling
+
+2. Update documentation
+   - Update README.md with new dependencies
+   - Document LanceDB configuration
+   - Add examples for vector search usage
+
+3. Clean up and commit changes
+   - Review all changes
+   - Run final tests
+   - Create commit with descriptive message

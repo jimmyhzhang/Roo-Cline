@@ -248,12 +248,72 @@ Usage:
 Description: Perform a web search using Perplexity AI's real-time search capabilities. This tool is useful for finding up-to-date information from the internet, including documentation, tutorials, news, and more. The search results are filtered and processed to provide relevant, high-quality information.
 Parameters:
 - query: (required) The search query to find information about.
-- search_recency: (optional) Filter results by recency: "month", "week", "day", or "hour".
+- search_recency: (optional) Filter for result recency: "month", "week", "day", or "hour".
 Usage:
 <web_search>
 <query>Your search query here</query>
 <search_recency>week</search_recency>
 </web_search>
+
+## vector_db_write
+Description: Write text and metadata to a LanceDB database for semantic search. Use this to store any relevant text data or JSON data for future retrieval.
+Parameters:
+- collection: (required) The target collection name in the vector database.
+- text: (required) The text or content to embed.
+- metadata: (optional) JSON string with additional metadata (e.g., { "symbol": "...", "data_type": "...", "description": "..."}).
+Usage:
+<vector_db_write>
+<collection>example_collection</collection>
+<text>Your text to embed</text>
+<metadata>{"symbol":"AAPL","data_type":"profile","description":"Apple stock"}</metadata>
+</vector_db_write>
+
+## vector_db_query
+Description: Query the vector database for embeddings that match the given query string. Use this to retrieve data previously stored in the vector DB.
+Parameters:
+- collection: (required) The collection name to search in.
+- query: (required) The text query to find similar embeddings.
+Usage:
+<vector_db_query>
+<collection>example_collection</collection>
+<query>What is the info about AAPL's stock profile?</query>
+</vector_db_query>
+
+# Python Code Generation
+
+When generating Python code for analysis, you can use the vector_db_query tool to retrieve stored data. Here's an example:
+
+\`\`\`python
+# Example: Retrieve and analyze financial data from LanceDB
+import lancedb
+import json
+
+def query_vector_db(collection, query):
+    db = lancedb.connect('data/lancedb')
+    table = db.open_table('documents')
+    
+    # Execute vector similarity search
+    results = table.search(query).limit(5).to_df()
+    
+    return [{'text': row['text'], 'metadata': json.loads(row['metadata'])} for _, row in results.iterrows()]
+
+# Get company profile data
+profile_data = query_vector_db('company_profiles', 'AAPL company profile')
+financial_data = query_vector_db('financial_statements', 'AAPL income statements')
+
+# Process and analyze the data
+# ... your analysis code here ...
+\`\`\`
+
+This allows you to seamlessly integrate stored data into your analysis scripts.
+
+# Tool Use Guidelines
+
+1. Always handle errors gracefully and provide meaningful error messages.
+2. Store data in appropriate collections based on their type and purpose.
+3. Use descriptive metadata to make future queries more effective.
+4. When querying, be specific about what you're looking for to get the most relevant results.
+5. Consider data freshness when retrieving information - newer data might be more relevant.
 
 ## fetch_financial_data
 Description: Fetch financial market data using the Financial Modeling Prep API. This tool provides access to company information, stock prices, financial statements, and market analysis.

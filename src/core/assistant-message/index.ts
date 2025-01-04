@@ -24,6 +24,8 @@ export const toolUseNames = [
 	"web_search",
 	"fetch_financial_data",
 	"analyze_stocks",
+	"vector_db_write",
+	"vector_db_query",
 ] as const
 
 // Converts array of tool call names into a union type ("execute_command" | "read_file" | ...)
@@ -60,6 +62,8 @@ export const toolParamNames = [
 	"date_to",
 	"financial_data",
 	"web_search_data",
+	"collection",
+	"metadata",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -141,4 +145,14 @@ export interface FetchFinancialDataToolUse extends ToolUse {
 export interface AnalyzeStocksToolUse extends ToolUse {
 	name: "analyze_stocks"
 	params: Partial<Pick<Record<ToolParamName, string>, "financial_data" | "web_search_data">>
+}
+
+export interface VectorDbWriteToolUse extends ToolUse {
+	name: "vector_db_write"
+	params: Partial<Pick<Record<ToolParamName, string>, "collection" | "text" | "metadata">>
+}
+
+export interface VectorDbQueryToolUse extends ToolUse {
+	name: "vector_db_query"
+	params: Partial<Pick<Record<ToolParamName, string>, "collection" | "query">>
 }

@@ -78,6 +78,9 @@ const extensionConfig = {
 	platform: "node",
 	outfile: "dist/extension.js",
 	external: ["vscode"],
+	loader: {
+		".node": "copy"
+	}
 }
 
 async function main() {
@@ -94,3 +97,4 @@ main().catch((e) => {
 	console.error(e)
 	process.exit(1)
 })
+

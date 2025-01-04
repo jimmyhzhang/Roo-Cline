@@ -1,6 +1,7 @@
 import { Anthropic } from "@anthropic-ai/sdk"
 import cloneDeep from "clone-deep"
-import { DiffStrategy, getDiffStrategy, UnifiedDiffStrategy } from "./diff/DiffStrategy"
+import type { DiffStrategy } from './diff/types'
+import { SearchReplaceDiffStrategy } from "./diff/strategies/search-replace"
 import delay from "delay"
 import fs, { writeFile } from "fs/promises"
 import os from "os"
@@ -8,7 +9,8 @@ import pWaitFor from "p-wait-for"
 import * as path from "path"
 import { serializeError } from "serialize-error"
 import * as vscode from "vscode"
-import { ApiHandler, SingleCompletionHandler, buildApiHandler } from "../api"
+import type { ApiHandler } from "../api"
+import { buildApiHandler } from "../api"
 import { ApiStream } from "../api/transform/stream"
 import { DiffViewProvider } from "../integrations/editor/DiffViewProvider"
 import { findToolName, formatContentBlockToMarkdown } from "../integrations/misc/export-markdown"
@@ -24,17 +26,17 @@ import { findLastIndex } from "../shared/array"
 import { combineApiRequests } from "../shared/combineApiRequests"
 import { combineCommandSequences } from "../shared/combineCommandSequences"
 import {
-	BrowserAction,
-	BrowserActionResult,
-	browserActions,
-	ClineApiReqCancelReason,
-	ClineApiReqInfo,
-	ClineAsk,
-	ClineAskUseMcpServer,
-	ClineMessage,
-	ClineSay,
-	ClineSayBrowserAction,
-	ClineSayTool,
+    BrowserAction,
+    BrowserActionResult,
+    browserActions,
+    ClineApiReqCancelReason,
+    ClineApiReqInfo,
+    ClineAsk,
+    ClineAskUseMcpServer,
+    ClineMessage,
+    ClineSay,
+    ClineSayBrowserAction,
+    ClineSayTool,
 } from "../shared/ExtensionMessage"
 import { getApiMetrics } from "../shared/getApiMetrics"
 import { HistoryItem } from "../shared/HistoryItem"
@@ -53,6 +55,8 @@ import { BrowserSession } from "../services/browser/BrowserSession"
 import { OpenRouterHandler } from "../api/providers/openrouter"
 import { FinancialModelingPrepClient } from "../services/fmp/FinancialModelingPrepClient"
 import { AnalyzeStockClient } from "../services/analyze/AnalyzeStockClient"
+import { v4 as uuidv4 } from 'uuid'
+import { VectorDB } from '../utils/vector_db_utils'
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -88,6 +92,7 @@ export class Cline {
 	abandoned = false
 	private diffViewProvider: DiffViewProvider
 	private analyzeStockClient: AnalyzeStockClient
+	private readonly vectorDb: VectorDB
 
 	// streaming
 	private currentStreamingContentIndex = 0
@@ -116,21 +121,22 @@ export class Cline {
 		this.urlContentFetcher = new UrlContentFetcher(provider.context)
 		this.browserSession = new BrowserSession(provider.context)
 		this.perplexityClient = new PerplexityClient()
-		this.diffViewProvider = new DiffViewProvider(cwd)
+		this.analyzeStockClient = new AnalyzeStockClient(process.env.ANTHROPIC_API_KEY || "", process.cwd())
+		this.diffViewProvider = new DiffViewProvider(process.cwd())
 		this.customInstructions = customInstructions
 		this.diffEnabled = enableDiff ?? false
-		if (this.diffEnabled && this.api.getModel().id) {
-			this.diffStrategy = getDiffStrategy(this.api.getModel().id, fuzzyMatchThreshold ?? 1.0)
+		this.vectorDb = new VectorDB("/Users/hezhang/repos/demo/financial_advisor/data/lancedb")
+
+		if (this.diffEnabled) {
+			this.diffStrategy = new SearchReplaceDiffStrategy(fuzzyMatchThreshold)
 		}
-		this.analyzeStockClient = new AnalyzeStockClient(cwd, process.env.ANTHROPIC_API_KEY || "")
+
 		if (historyItem) {
-			this.taskId = historyItem.id
+			this.taskId = historyItem.task
 			this.resumeTaskFromHistory()
-		} else if (task || images) {
-			this.taskId = Date.now().toString()
-			this.startTask(task, images)
 		} else {
-			throw new Error("Either historyItem or task/images must be provided")
+			this.taskId = uuidv4()
+			this.startTask(task, images)
 		}
 	}
 
@@ -882,7 +888,7 @@ export class Cline {
 					// (have to do this for partial and complete since sending content in thinking tags to markdown renderer will automatically be removed)
 					// Remove end substrings of <thinking or </thinking (below xml parsing is only for opening tags)
 					// (this is done with the xml parsing below now, but keeping here for reference)
-					// content = content.replace(/<\/?t(?:h(?:i(?:n(?:k(?:i(?:n(?:g)?)?)?)?$/, "")
+					// content = content.replace(/<\/?t(?:h(?:i(?:n(?:k(?:i(?:n(?:g)?)?)?$/, "")
 					// Remove all instances of <thinking> (with optional line break after) and </thinking> (with optional line break before)
 					// - Needs to be separate since we dont want to remove the line break before the first tag
 					// - Needs to happen before the xml parsing below
@@ -953,6 +959,10 @@ export class Cline {
 							return `[${block.name} for '${block.params.symbols}']`
 						case "analyze_stocks":
 							return `[${block.name} for analysis]`
+						case "vector_db_write":
+							return `[${block.name} for '${block.params.collection}']`
+						case "vector_db_query":
+							return `[${block.name} for '${block.params.query}']`
 					}
 				}
 
@@ -2105,8 +2115,9 @@ export class Cline {
 								}
 
 								const fmpClient = new FinancialModelingPrepClient(
-									process.env.FMP_API_KEY || "FAFIe7OhSVEe0JKy1xMLqoXtGZVJ6Tvt"
-								)
+									process.env.FMP_API_KEY || "FAFIe7OhSVEe0JKy1xMLqoXtGZVJ6Tvt",
+									process.env.OPENAI_API_KEY || ""
+								);
 
 								// Split and clean symbols
 								const symbolList = symbols.split(',').map(s => s.trim())
@@ -2114,8 +2125,16 @@ export class Cline {
 								// Get company profiles
 								const profiles = await Promise.all(
 									symbolList.map(symbol => fmpClient.getCompanyProfile(symbol))
-								)
-								let output = "=== Company Profiles ===\n" + fmpClient.formatFinancialData(profiles.flat(), "Company Profile")
+								);
+
+								let output = "=== Company Profiles ===\n";
+								for (const profile of profiles.flat()) {
+									output += `\nSymbol: ${profile.symbol}`;
+									output += `\nCompany Name: ${profile.companyName}`;
+									output += `\nSector: ${profile.sector}`;
+									output += `\nIndustry: ${profile.industry}`;
+									output += `\nDescription: ${profile.description}\n`;
+								}
 
 								// Get financial statements if date range is provided
 								if (dateFrom && dateTo) {
@@ -2124,13 +2143,13 @@ export class Cline {
 										Promise.all(symbolList.map(symbol => fmpClient.getBalanceSheet(symbol))),
 										Promise.all(symbolList.map(symbol => fmpClient.getCashFlow(symbol))),
 										Promise.all(symbolList.map(symbol => fmpClient.getFinancialRatios(symbol)))
-									])
+									]);
 
-									output += "\n=== Financial Statements ===\n"
-									output += fmpClient.formatFinancialData(incomeStatements.flat(), "Income Statement")
-									output += fmpClient.formatFinancialData(balanceSheets.flat(), "Balance Sheet")
-									output += fmpClient.formatFinancialData(cashFlows.flat(), "Cash Flow")
-									output += fmpClient.formatFinancialData(ratios.flat(), "Financial Ratios")
+									output += "\n=== Financial Statements ===\n";
+									output += "\nIncome Statements:\n" + incomeStatements.flat().join("\n");
+									output += "\nBalance Sheets:\n" + balanceSheets.flat().join("\n");
+									output += "\nCash Flows:\n" + cashFlows.flat().join("\n");
+									output += "\nFinancial Ratios:\n" + ratios.flat().join("\n");
 								}
 
 								pushToolResult(formatResponse.toolResult(output))
@@ -2186,6 +2205,61 @@ export class Cline {
 							await handleError("analyzing stocks", error)
 							break
 						}
+					}
+					case "vector_db_write": {
+						const { collection, text, metadata } = block.params;
+						if (!collection || !text) {
+							this.consecutiveMistakeCount++;
+							const errorResponse = await this.sayAndCreateMissingParamError(
+								"vector_db_write",
+								collection ? "text" : "collection"
+							);
+							this.userMessageContent.push({ type: "text", text: errorResponse });
+							break;
+						}
+
+						const approval = await askApproval("tool", JSON.stringify({ tool: "vectorDbWrite", collection, text, metadata }));
+						if (!approval) {
+							pushToolResult(formatResponse.toolDenied());
+							this.didRejectTool = true;
+							break;
+						}
+
+						try {
+							const result = await this.executeVectorDbWrite(collection, text, metadata);
+							pushToolResult(formatResponse.toolResult(result));
+						} catch (error) {
+							await handleError("writing to vector database", error as Error);
+						}
+						break;
+					}
+
+					case "vector_db_query": {
+						const { collection, query } = block.params;
+						if (!collection || !query) {
+							this.consecutiveMistakeCount++;
+							const errorResponse = await this.sayAndCreateMissingParamError(
+								"vector_db_query",
+								collection ? "query" : "collection"
+							);
+							this.userMessageContent.push({ type: "text", text: errorResponse });
+							break;
+						}
+
+						const approval = await askApproval("tool", JSON.stringify({ tool: "vectorDbQuery", collection, query }));
+						if (!approval) {
+							pushToolResult(formatResponse.toolDenied());
+							this.didRejectTool = true;
+							break;
+						}
+
+						try {
+							const result = await this.executeVectorDbQuery(collection, query);
+							pushToolResult(formatResponse.toolResult(result));
+						} catch (error) {
+							await handleError("querying vector database", error as Error);
+						}
+						break;
 					}
 				}
 				break
@@ -2689,5 +2763,30 @@ export class Cline {
 		}
 
 		return `<environment_details>\n${details.trim()}\n</environment_details>`
+	}
+
+	private async executeVectorDbWrite(collection: string, text: string, metadata?: string): Promise<string> {
+		try {
+			await this.vectorDb.write(collection, {
+				id: uuidv4(),
+				text,
+				metadata: metadata ? JSON.parse(metadata) : {}
+			});
+			return "Successfully stored in vector DB.";
+		} catch (error) {
+			throw new Error(`Vector DB write failed: ${(error as Error).message}`);
+		}
+	}
+
+	private async executeVectorDbQuery(collection: string, query: string): Promise<string> {
+		try {
+			const results = await this.vectorDb.query({
+				text: query,
+				limit: 5
+			});
+			return JSON.stringify(results, null, 2);
+		} catch (error) {
+			throw new Error(`Vector DB query failed: ${(error as Error).message}`);
+		}
 	}
 }

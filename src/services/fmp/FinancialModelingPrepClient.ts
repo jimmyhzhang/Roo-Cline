@@ -1,4 +1,7 @@
 import axios from 'axios';
+import path from 'node:path';
+import { VectorDB } from '../../utils/vector_db_utils';
+import { v4 as uuidv4 } from 'uuid';
 
 // Response interfaces
 interface CompanySearchResult {
@@ -29,15 +32,13 @@ interface CompanyProfile {
     sector: string;
     ceo: string;
     website: string;
-    // ... other fields
 }
 
 interface FinancialStatement {
     date: string;
     symbol: string;
     reportedCurrency: string;
-    // Common fields for all statement types
-    [key: string]: any;
+    [key: string]: string | number | boolean | null;
 }
 
 interface FinancialRatio {
@@ -55,27 +56,44 @@ interface FinancialRatio {
     returnOnAssets?: number;
     debtRatio?: number;
     debtEquityRatio?: number;
-    // ... other ratios
+}
+
+interface KeyMetric {
+    symbol: string;
+    date: string;
+    period: string;
+    [key: string]: string | number | boolean | null;
+}
+
+interface ChromaMetadata {
+    data_type: string;
+    symbol?: string;
+    query?: string;
+    period?: string;
+    description?: string;
+    timestamp: string;
 }
 
 export class FinancialModelingPrepClient {
     private readonly apiKey: string;
-    private readonly baseUrl = 'https://financialmodelingprep.com/api/v3';
+    private readonly openAiApiKey: string;
+    private readonly vectorDb: VectorDB;
 
-    constructor(apiKey: string) {
-        if (!apiKey) {
-            throw new Error('API key is required for Financial Modeling Prep API');
-        }
+    constructor(apiKey: string, openAiApiKey: string) {
         this.apiKey = apiKey;
+        this.openAiApiKey = openAiApiKey;
+        this.vectorDb = new VectorDB(
+			/*path.join(process.cwd(), 'data', 'lancedb')*/ "/Users/hezhang/repos/demo/financial_advisor/data/lancedb"
+		)
     }
 
-    private async get<T>(endpoint: string, params: Record<string, any> = {}): Promise<T> {
+    private async get<T>(endpoint: string, params: Record<string, string | number | boolean> = {}): Promise<T> {
         try {
-            const response = await axios.get(`${this.baseUrl}${endpoint}`, {
+            const response = await axios.get(`https://financialmodelingprep.com/api/v3${endpoint}`, {
                 params: {
                     ...params,
-                    apikey: this.apiKey
-                }
+                    apikey: this.apiKey,
+                },
             });
             return response.data;
         } catch (error) {
@@ -84,9 +102,37 @@ export class FinancialModelingPrepClient {
         }
     }
 
+    private async storeInVectorDB(collectionName: string, text: string, metadata: {
+        data_type: string;
+        symbol?: string;
+        query?: string;
+        period?: string;
+        description?: string;
+    }): Promise<void> {
+        await this.vectorDb.write(collectionName, {
+            id: uuidv4(),
+            text,
+            metadata: {
+                ...metadata,
+                timestamp: new Date().toISOString()
+            }
+        });
+    }
+
     // Company Search API
     async searchCompanies(query: string): Promise<CompanySearchResult[]> {
-        return this.get<CompanySearchResult[]>(`/search?query=${encodeURIComponent(query)}`);
+        const results = await this.get<CompanySearchResult[]>(`/search?query=${encodeURIComponent(query)}`);
+        await this.storeInVectorDB('company_search', JSON.stringify(results), {
+            data_type: 'company_search',
+            query,
+        });
+        return results.map((r) => ({
+            symbol: r.symbol,
+            name: r.name,
+            stockExchange: r.stockExchange,
+            currency: r.currency,
+            exchangeShortName: r.exchangeShortName,
+        }));
     }
 
     // Stock List API
@@ -95,40 +141,108 @@ export class FinancialModelingPrepClient {
     }
 
     // Company Information API
-    async getCompanyProfile(symbol: string): Promise<CompanyProfile> {
+    async getCompanyProfile(symbol: string): Promise<Partial<CompanyProfile>> {
         const profiles = await this.get<CompanyProfile[]>(`/profile/${symbol}`);
         if (!profiles || profiles.length === 0) {
             throw new Error(`No profile found for symbol: ${symbol}`);
         }
-        return profiles[0];
+        const profile = profiles[0];
+
+        // Store in Vector DB
+        await this.storeInVectorDB('company_profiles', JSON.stringify(profile), {
+            symbol: profile.symbol,
+            data_type: 'company_profile',
+            description: profile.companyName,
+        });
+
+        // Return summary
+        return {
+            symbol: profile.symbol,
+            companyName: profile.companyName,
+            sector: profile.sector,
+            industry: profile.industry,
+            description: 'Full profile stored in Vector DB. Use vector_db_query to retrieve details.',
+        };
     }
 
     // Financial Statements APIs
-    async getIncomeStatement(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
-        return this.get<FinancialStatement[]>(`/income-statement/${symbol}`, { period, limit });
+    async getIncomeStatement(
+        symbol: string,
+        period: 'annual' | 'quarter' = 'quarter',
+        limit = 5
+    ): Promise<string> {
+        const data = await this.get<FinancialStatement[]>(`/income-statement/${symbol}`, { period, limit });
+
+        await this.storeInVectorDB('financial_statements', JSON.stringify(data), {
+            symbol,
+            data_type: 'income_statement',
+            period,
+        });
+
+        return `Stored ${data.length} income statements for ${symbol} in Vector DB. Use vector_db_query to retrieve details.`;
     }
 
-    async getBalanceSheet(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
-        return this.get<FinancialStatement[]>(`/balance-sheet-statement/${symbol}`, { period, limit });
+    async getBalanceSheet(
+        symbol: string,
+        period: 'annual' | 'quarter' = 'quarter',
+        limit = 5
+    ): Promise<string> {
+        const data = await this.get<FinancialStatement[]>(`/balance-sheet-statement/${symbol}`, { period, limit });
+
+        await this.storeInVectorDB('financial_statements', JSON.stringify(data), {
+            symbol,
+            data_type: 'balance_sheet',
+            period,
+        });
+
+        return `Stored ${data.length} balance sheets for ${symbol} in Vector DB. Use vector_db_query to retrieve details.`;
     }
 
-    async getCashFlow(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
-        return this.get<FinancialStatement[]>(`/cash-flow-statement/${symbol}`, { period, limit });
+    async getCashFlow(symbol: string, period: 'annual' | 'quarter' = 'quarter', limit = 5): Promise<string> {
+        const data = await this.get<FinancialStatement[]>(`/cash-flow-statement/${symbol}`, { period, limit });
+
+        await this.storeInVectorDB('financial_statements', JSON.stringify(data), {
+            symbol,
+            data_type: 'cash_flow',
+            period,
+        });
+
+        return `Stored ${data.length} cash flow statements for ${symbol} in Vector DB. Use vector_db_query to retrieve details.`;
     }
 
     // Statement Analysis APIs
-    async getFinancialRatios(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialRatio[]> {
-        return this.get<FinancialRatio[]>(`/ratios/${symbol}`, { period, limit });
+    async getFinancialRatios(
+        symbol: string,
+        period: 'annual' | 'quarter' = 'quarter',
+        limit = 5
+    ): Promise<string> {
+        const data = await this.get<FinancialRatio[]>(`/ratios/${symbol}`, { period, limit });
+
+        await this.storeInVectorDB('financial_analysis', JSON.stringify(data), {
+            symbol,
+            data_type: 'financial_ratios',
+            period,
+        });
+
+        return `Stored ${data.length} financial ratios for ${symbol} in Vector DB. Use vector_db_query to retrieve details.`;
     }
 
-    async getKeyMetrics(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<any[]> {
-        return this.get<any[]>(`/key-metrics/${symbol}`, { period, limit });
+    async getKeyMetrics(symbol: string, period: 'annual' | 'quarter' = 'quarter', limit = 5): Promise<string> {
+        const data = await this.get<KeyMetric[]>(`/key-metrics/${symbol}`, { period, limit });
+
+        await this.storeInVectorDB('financial_analysis', JSON.stringify(data), {
+            symbol,
+            data_type: 'key_metrics',
+            period,
+        });
+
+        return `Stored ${data.length} key metrics for ${symbol} in Vector DB. Use vector_db_query to retrieve details.`;
     }
 
     // Helper method to format financial data as a readable string
-    formatFinancialData(data: any[], type: string): string {
+    formatFinancialData(data: (CompanyProfile | FinancialStatement | FinancialRatio | KeyMetric)[], type: string): string {
         if (!data || data.length === 0) {
-            return "No results found.";
+            return 'No results found.';
         }
 
         let output = `\n=== ${type} ===\n`;
@@ -142,4 +256,4 @@ export class FinancialModelingPrepClient {
         }
         return output;
     }
-} 
+}

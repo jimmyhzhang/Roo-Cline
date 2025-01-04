@@ -1,4 +1,4 @@
-import { ApiConfiguration } from "../shared/api"
+import type { ApiConfiguration } from "../shared/api"
 import { buildApiHandler } from "../api"
 import { OpenRouterHandler } from "../api/providers/openrouter"
 
