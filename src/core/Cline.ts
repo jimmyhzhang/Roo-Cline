@@ -2,7 +2,7 @@ import { Anthropic } from "@anthropic-ai/sdk"
 import cloneDeep from "clone-deep"
 import { DiffStrategy, getDiffStrategy, UnifiedDiffStrategy } from "./diff/DiffStrategy"
 import delay from "delay"
-import fs from "fs/promises"
+import fs, { writeFile } from "fs/promises"
 import os from "os"
 import pWaitFor from "p-wait-for"
 import * as path from "path"
@@ -797,6 +797,8 @@ export class Cline {
 
 		const { browserViewportSize, preferredLanguage } = await this.providerRef.deref()?.getState() ?? {}
 		const systemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsComputerUse ?? false, mcpHub, this.diffStrategy, browserViewportSize) + await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
+
+		await writeFile(path.join(cwd, 'system_prompt.txt'), systemPrompt)
 
 		// If the previous API request's total token usage is close to the context window, truncate the conversation history to free up space for the new request
 		if (previousApiReqIndex >= 0) {
@@ -2105,23 +2107,30 @@ export class Cline {
 								const fmpClient = new FinancialModelingPrepClient(
 									process.env.FMP_API_KEY || "FAFIe7OhSVEe0JKy1xMLqoXtGZVJ6Tvt"
 								)
-								
+
+								// Split and clean symbols
+								const symbolList = symbols.split(',').map(s => s.trim())
+
 								// Get company profiles
-								const profiles = await fmpClient.getCompanyProfile(symbols)
-								let output = "=== Company Profiles ===\n" + fmpClient.formatFinancialData([profiles], "Company Profile")
+								const profiles = await Promise.all(
+									symbolList.map(symbol => fmpClient.getCompanyProfile(symbol))
+								)
+								let output = "=== Company Profiles ===\n" + fmpClient.formatFinancialData(profiles.flat(), "Company Profile")
 
 								// Get financial statements if date range is provided
 								if (dateFrom && dateTo) {
-									const incomeStatements = await fmpClient.getIncomeStatement(symbols)
-									const balanceSheets = await fmpClient.getBalanceSheet(symbols)
-									const cashFlows = await fmpClient.getCashFlow(symbols)
-									const ratios = await fmpClient.getFinancialRatios(symbols)
+									const [incomeStatements, balanceSheets, cashFlows, ratios] = await Promise.all([
+										Promise.all(symbolList.map(symbol => fmpClient.getIncomeStatement(symbol))),
+										Promise.all(symbolList.map(symbol => fmpClient.getBalanceSheet(symbol))),
+										Promise.all(symbolList.map(symbol => fmpClient.getCashFlow(symbol))),
+										Promise.all(symbolList.map(symbol => fmpClient.getFinancialRatios(symbol)))
+									])
 
 									output += "\n=== Financial Statements ===\n"
-									output += fmpClient.formatFinancialData(incomeStatements, "Income Statement")
-									output += fmpClient.formatFinancialData(balanceSheets, "Balance Sheet")
-									output += fmpClient.formatFinancialData(cashFlows, "Cash Flow")
-									output += fmpClient.formatFinancialData(ratios, "Financial Ratios")
+									output += fmpClient.formatFinancialData(incomeStatements.flat(), "Income Statement")
+									output += fmpClient.formatFinancialData(balanceSheets.flat(), "Balance Sheet")
+									output += fmpClient.formatFinancialData(cashFlows.flat(), "Cash Flow")
+									output += fmpClient.formatFinancialData(ratios.flat(), "Financial Ratios")
 								}
 
 								pushToolResult(formatResponse.toolResult(output))
