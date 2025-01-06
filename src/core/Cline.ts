@@ -2074,15 +2074,14 @@ export class Cline {
 					}
 					case "fetch_financial_data": {
 						const symbols: string | undefined = block.params.symbols
-						const exchange: string | undefined = block.params.exchange
-						const dateFrom: string | undefined = block.params.date_from
-						const dateTo: string | undefined = block.params.date_to
+						const datasets: string | undefined = block.params.datasets
 
 						try {
 							if (block.partial) {
 								const partialMessage = JSON.stringify({
 									tool: "fetchFinancialData",
 									symbols: removeClosingTag("symbols", symbols),
+									datasets: removeClosingTag("datasets", datasets),
 								} satisfies ClineSayTool)
 								await this.ask("tool", partialMessage, block.partial).catch(() => {})
 								break
@@ -2118,20 +2117,23 @@ export class Cline {
 								let output = "=== Company Profiles ===\n" + fmpClient.formatFinancialData(profiles.flat(), "Company Profile")
 
 								// Get financial statements if date range is provided
-								if (dateFrom && dateTo) {
-									const [incomeStatements, balanceSheets, cashFlows, ratios] = await Promise.all([
-										Promise.all(symbolList.map(symbol => fmpClient.getIncomeStatement(symbol))),
-										Promise.all(symbolList.map(symbol => fmpClient.getBalanceSheet(symbol))),
-										Promise.all(symbolList.map(symbol => fmpClient.getCashFlow(symbol))),
-										Promise.all(symbolList.map(symbol => fmpClient.getFinancialRatios(symbol)))
+								// if (dateFrom && dateTo) {
+									const [incomeGrowth, ratiosTTM, keyMetricsTTM] = await Promise.all([
+										Promise.all(symbolList.map(symbol => fmpClient.getIncomeStatementGrowth(symbol))),
+										Promise.all(symbolList.map(symbol => fmpClient.getFinancialRatiosTTM(symbol))),
+										Promise.all(symbolList.map(symbol => fmpClient.getKeyMetricsTTM(symbol)))
 									])
 
 									output += "\n=== Financial Statements ===\n"
-									output += fmpClient.formatFinancialData(incomeStatements.flat(), "Income Statement")
-									output += fmpClient.formatFinancialData(balanceSheets.flat(), "Balance Sheet")
-									output += fmpClient.formatFinancialData(cashFlows.flat(), "Cash Flow")
-									output += fmpClient.formatFinancialData(ratios.flat(), "Financial Ratios")
-								}
+									// output += fmpClient.formatFinancialData(incomeStatements.flat(), "Income Statement")
+									// output += fmpClient.formatFinancialData(balanceSheets.flat(), "Balance Sheet")
+									// output += fmpClient.formatFinancialData(cashFlows.flat(), "Cash Flow")
+									// output += fmpClient.formatFinancialData(ratios.flat(), "Financial Ratios")
+									// output += fmpClient.formatFinancialData(keyMetrics.flat(), "Key Metrics")
+									output += fmpClient.formatFinancialData(incomeGrowth.flat(), "Income Statement Growth")
+									output += fmpClient.formatFinancialData(keyMetricsTTM.flat(), "Key Metrics")
+									output += fmpClient.formatFinancialData(ratiosTTM.flat(), "Financial Ratios")
+								// }
 
 								pushToolResult(formatResponse.toolResult(output))
 								break

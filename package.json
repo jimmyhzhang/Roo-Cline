@@ -1,10 +1,10 @@
 {
   "name": "roo-cline",
-  "displayName": "Roo Cline",
+  "displayName": "Reading+AI Cline",
   "description": "A fork of Cline, an autonomous coding agent, with some added experimental configuration and automation features.",
   "publisher": "RooVeterinaryInc",
   "version": "2.2.38",
-  "icon": "assets/icons/rocket.png",
+  "icon": "$(add)",
   "galleryBanner": {
     "color": "#617A91",
     "theme": "dark"
@@ -49,8 +49,8 @@
       "activitybar": [
         {
           "id": "roo-cline-ActivityBar",
-          "title": "Roo Cline",
-          "icon": "$(rocket)"
+          "title": "Reading+AI Cline",
+          "icon": "$(add)"
         }
       ]
     },

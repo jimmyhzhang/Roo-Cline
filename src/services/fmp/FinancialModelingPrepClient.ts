@@ -108,12 +108,24 @@ export class FinancialModelingPrepClient {
         return this.get<FinancialStatement[]>(`/income-statement/${symbol}`, { period, limit });
     }
 
+    async getIncomeStatementGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+        return this.get<FinancialStatement[]>(`/income-statement-growth/${symbol}`, { period, limit });
+    }
+
     async getBalanceSheet(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/balance-sheet-statement/${symbol}`, { period, limit });
     }
 
+    async getBalanceSheetGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+        return this.get<FinancialStatement[]>(`/balance-sheet-statement-growth/${symbol}`, { period, limit });
+    }
+
     async getCashFlow(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/cash-flow-statement/${symbol}`, { period, limit });
+    }
+    
+    async getCashFlowGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+        return this.get<FinancialStatement[]>(`/cash-flow-statement-growth/${symbol}`, { period, limit });
     }
 
     // Statement Analysis APIs
@@ -121,8 +133,16 @@ export class FinancialModelingPrepClient {
         return this.get<FinancialRatio[]>(`/ratios/${symbol}`, { period, limit });
     }
 
+    async getFinancialRatiosTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialRatio[]> {
+        return this.get<FinancialRatio[]>(`/ratios-ttm/${symbol}`, { period, limit });
+    }
+
     async getKeyMetrics(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<any[]> {
         return this.get<any[]>(`/key-metrics/${symbol}`, { period, limit });
+    }
+
+    async getKeyMetricsTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<any[]> {
+        return this.get<any[]>(`/key-metrics-ttm/${symbol}`, { period, limit });
     }
 
     // Helper method to format financial data as a readable string

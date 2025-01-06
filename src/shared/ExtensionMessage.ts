@@ -126,6 +126,7 @@ export interface ClineSayTool {
 	filePattern?: string
 	query?: string
 	symbols?: string
+	datasets?: string
 }
 
 // must keep in sync with system prompt

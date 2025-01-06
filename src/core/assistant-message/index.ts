@@ -60,6 +60,7 @@ export const toolParamNames = [
 	"date_to",
 	"financial_data",
 	"web_search_data",
+	"datasets",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
