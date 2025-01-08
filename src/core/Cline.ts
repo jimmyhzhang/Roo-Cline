@@ -798,7 +798,7 @@ export class Cline {
 		const { browserViewportSize, preferredLanguage } = await this.providerRef.deref()?.getState() ?? {}
 		const systemPrompt = await SYSTEM_PROMPT(cwd, this.api.getModel().info.supportsComputerUse ?? false, mcpHub, this.diffStrategy, browserViewportSize) + await addCustomInstructions(this.customInstructions ?? '', cwd, preferredLanguage)
 
-		await writeFile(path.join(cwd, 'system_prompt.txt'), systemPrompt)
+		//await writeFile(path.join(cwd, 'system_prompt.txt'), systemPrompt)
 
 		// If the previous API request's total token usage is close to the context window, truncate the conversation history to free up space for the new request
 		if (previousApiReqIndex >= 0) {
@@ -2266,10 +2266,10 @@ export class Cline {
 			}),
 		)
 
-		const [parsedUserContent, environmentDetails] = await this.loadContext(userContent, includeFileDetails)
+		const [parsedUserContent] = await this.loadContext(userContent, includeFileDetails)
 		userContent = parsedUserContent
 		// add environment details as its own text block, separate from tool results
-		userContent.push({ type: "text", text: environmentDetails })
+		// userContent.push({ type: "text", text: environmentDetails })
 
 		await this.addToApiConversationHistory({ role: "user", content: userContent })
 
@@ -2543,7 +2543,7 @@ export class Cline {
 					return block
 				}),
 			),
-			this.getEnvironmentDetails(includeFileDetails),
+			//this.getEnvironmentDetails(includeFileDetails),
 		])
 	}
 

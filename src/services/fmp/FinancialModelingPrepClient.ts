@@ -104,44 +104,44 @@ export class FinancialModelingPrepClient {
     }
 
     // Financial Statements APIs
-    async getIncomeStatement(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+    async getIncomeStatement(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/income-statement/${symbol}`, { period, limit });
     }
 
-    async getIncomeStatementGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+    async getIncomeStatementGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/income-statement-growth/${symbol}`, { period, limit });
     }
 
-    async getBalanceSheet(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+    async getBalanceSheet(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/balance-sheet-statement/${symbol}`, { period, limit });
     }
 
-    async getBalanceSheetGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+    async getBalanceSheetGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/balance-sheet-statement-growth/${symbol}`, { period, limit });
     }
 
-    async getCashFlow(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+    async getCashFlow(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/cash-flow-statement/${symbol}`, { period, limit });
     }
-    
-    async getCashFlowGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialStatement[]> {
+
+    async getCashFlowGrowth(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialStatement[]> {
         return this.get<FinancialStatement[]>(`/cash-flow-statement-growth/${symbol}`, { period, limit });
     }
 
     // Statement Analysis APIs
-    async getFinancialRatios(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialRatio[]> {
+    async getFinancialRatios(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialRatio[]> {
         return this.get<FinancialRatio[]>(`/ratios/${symbol}`, { period, limit });
     }
 
-    async getFinancialRatiosTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<FinancialRatio[]> {
+    async getFinancialRatiosTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<FinancialRatio[]> {
         return this.get<FinancialRatio[]>(`/ratios-ttm/${symbol}`, { period, limit });
     }
 
-    async getKeyMetrics(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<any[]> {
+    async getKeyMetrics(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<any[]> {
         return this.get<any[]>(`/key-metrics/${symbol}`, { period, limit });
     }
 
-    async getKeyMetricsTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 5): Promise<any[]> {
+    async getKeyMetricsTTM(symbol: string, period: 'annual' | 'quarter' = 'annual', limit: number = 1): Promise<any[]> {
         return this.get<any[]>(`/key-metrics-ttm/${symbol}`, { period, limit });
     }
 
