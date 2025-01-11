@@ -1146,12 +1146,12 @@ export class Cline {
 									await this.diffViewProvider.reset()
 									break
 								}
-								if (!predictedLineCount) {
-									this.consecutiveMistakeCount++
-									pushToolResult(await this.sayAndCreateMissingParamError("write_to_file", "line_count"))
-									await this.diffViewProvider.reset()
-									break
-								}
+								// if (!predictedLineCount) {
+								// 	this.consecutiveMistakeCount++
+								// 	pushToolResult(await this.sayAndCreateMissingParamError("write_to_file", "line_count"))
+								// 	await this.diffViewProvider.reset()
+								// 	break
+								// }
 								this.consecutiveMistakeCount = 0
 
 								// if isEditingFile false, that means we have the full contents of the file already.

@@ -844,7 +844,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				display: isHidden ? "none" : "flex",
 				flexDirection: "column",
 				overflow: "hidden",
-			}}>
+			}}
+		>
 			{task ? (
 				<TaskHeader
 					task={task}
@@ -863,29 +864,34 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 						overflowY: "auto",
 						display: "flex",
 						flexDirection: "column",
-					}}>
-					{showAnnouncement && <Announcement version={version} hideAnnouncement={hideAnnouncement} />}
+					}}
+				>
+					{showAnnouncement && (
+						<Announcement
+							version={version}
+							hideAnnouncement={hideAnnouncement}
+						/>
+					)}
 					<div style={{ padding: "0 20px", flexShrink: 0 }}>
-						<h2>What can I do for you?</h2>
+						<h2>Financial Advisory Agent</h2>
 						<p>
-							Thanks to{" "}
-							<VSCodeLink
-								href="https://www-cdn.anthropic.com/fed9cc193a14b84131812372d8d5857f8f304c52/Model_Card_Claude_3_Addendum.pdf"
-								style={{ display: "inline" }}>
-								Claude 3.5 Sonnet's agentic coding capabilities,
-							</VSCodeLink>{" "}
-							I can handle complex software development tasks step-by-step. With tools that let me create
-							& edit files, explore complex projects, use the browser, and execute terminal commands
-							(after you grant permission), I can assist you in ways that go beyond code completion or
-							tech support. I can even use MCP to create new tools and extend my own capabilities.
+							This is a single-agent system equipped with autonomous planning
+							and basic learning capabilities, designed to assist you in
+							conducting stock research, building portfolios, and optimizing
+							investment decisions.
 						</p>
 					</div>
-					{taskHistory.length > 0 && <HistoryPreview showHistoryView={showHistoryView} />}
+					{taskHistory.length > 0 && (
+						<HistoryPreview showHistoryView={showHistoryView} />
+					)}
 				</div>
 			)}
 			{task && (
 				<>
-					<div style={{ flexGrow: 1, display: "flex" }} ref={scrollContainerRef}>
+					<div
+						style={{ flexGrow: 1, display: "flex" }}
+						ref={scrollContainerRef}
+					>
 						<Virtuoso
 							ref={virtuosoRef}
 							key={task.ts} // trick to make sure virtuoso re-renders when task changes, and we use initialTopMostItemIndex to start at the bottom
@@ -898,15 +904,20 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 								Footer: () => <div style={{ height: 5 }} />, // Add empty padding at the bottom
 							}}
 							// increasing top by 3_000 to prevent jumping around when user collapses a row
-							increaseViewportBy={{ top: 3_000, bottom: Number.MAX_SAFE_INTEGER }} // hack to make sure the last message is always rendered to get truly perfect scroll to bottom animation when new messages are added (Number.MAX_SAFE_INTEGER is safe for arithmetic operations, which is all virtuoso uses this value for in src/sizeRangeSystem.ts)
+							increaseViewportBy={{
+								top: 3_000,
+								bottom: Number.MAX_SAFE_INTEGER,
+							}} // hack to make sure the last message is always rendered to get truly perfect scroll to bottom animation when new messages are added (Number.MAX_SAFE_INTEGER is safe for arithmetic operations, which is all virtuoso uses this value for in src/sizeRangeSystem.ts)
 							data={groupedMessages} // messages is the raw format returned by extension, modifiedMessages is the manipulated structure that combines certain messages of related type, and visibleMessages is the filtered structure that removes messages that should not be rendered
 							itemContent={itemContent}
 							atBottomStateChange={(isAtBottom) => {
-								setIsAtBottom(isAtBottom)
+								setIsAtBottom(isAtBottom);
 								if (isAtBottom) {
-									disableAutoScrollRef.current = false
+									disableAutoScrollRef.current = false;
 								}
-								setShowScrollToBottom(disableAutoScrollRef.current && !isAtBottom)
+								setShowScrollToBottom(
+									disableAutoScrollRef.current && !isAtBottom,
+								);
 							}}
 							atBottomThreshold={10} // anything lower causes issues with followOutput
 							initialTopMostItemIndex={groupedMessages.length - 1}
@@ -917,13 +928,18 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 							style={{
 								display: "flex",
 								padding: "10px 15px 0px 15px",
-							}}>
+							}}
+						>
 							<ScrollToBottomButton
 								onClick={() => {
-									scrollToBottomSmooth()
-									disableAutoScrollRef.current = false
-								}}>
-								<span className="codicon codicon-chevron-down" style={{ fontSize: "18px" }}></span>
+									scrollToBottomSmooth();
+									disableAutoScrollRef.current = false;
+								}}
+							>
+								<span
+									className="codicon codicon-chevron-down"
+									style={{ fontSize: "18px" }}
+								></span>
 							</ScrollToBottomButton>
 						</div>
 					) : (
@@ -937,7 +953,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 										: 0,
 								display: "flex",
 								padding: "10px 15px 0px 15px",
-							}}>
+							}}
+						>
 							{primaryButtonText && !isStreaming && (
 								<VSCodeButton
 									appearance="primary"
@@ -946,7 +963,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 										flex: secondaryButtonText ? 1 : 2,
 										marginRight: secondaryButtonText ? "6px" : "0",
 									}}
-									onClick={handlePrimaryButtonClick}>
+									onClick={handlePrimaryButtonClick}
+								>
 									{primaryButtonText}
 								</VSCodeButton>
 							)}
@@ -958,7 +976,8 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 										flex: isStreaming ? 2 : 1,
 										marginLeft: isStreaming ? 0 : "6px",
 									}}
-									onClick={handleSecondaryButtonClick}>
+									onClick={handleSecondaryButtonClick}
+								>
 									{isStreaming ? "Cancel" : secondaryButtonText}
 								</VSCodeButton>
 							)}
@@ -979,12 +998,12 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 				shouldDisableImages={shouldDisableImages}
 				onHeightChange={() => {
 					if (isAtBottom) {
-						scrollToBottomAuto()
+						scrollToBottomAuto();
 					}
 				}}
 			/>
 		</div>
-	)
+	);
 }
 
 const ScrollToBottomButton = styled.div`
