@@ -1,0 +1,398 @@
+# Instructions
+
+During you interaction with the user, if you find anything reusable in this project (e.g. version of a library, model name), especially about a fix to a mistake you made or a correction you received, you should take note in the `Lessons` section in the `.cursorrules` file so you will not make the same mistake again. 
+
+You should also use the `.cursorrules` file as a scratchpad to organize your thoughts. Especially when you receive a new task, you should first review the content of the scratchpad, clear old different task if necessary, first explain the task, and plan the steps you need to take to complete the task. You can use todo markers to indicate the progress, e.g.
+[X] Task 1
+[ ] Task 2
+Also update the progress of the task in the Scratchpad when you finish a subtask.
+Especially when you finished a milestone, it will help to improve your depth of task accomplishment to use the scratchpad to reflect and plan.
+The goal is to help you maintain a big picture as well as the progress of the task. Always refer to the Scratchpad when you plan the next step.
+
+# Tools
+
+Note all the tools are in python. So in the case you need to do batch processing, you can always consult the python files and write your own script.
+
+## LLM
+
+You could use the `tools/llm_api.py` file to query various LLM providers:
+
+1. OpenAI models:
+   - gpt-4o-mini
+   - gpt-4o
+   - o1-mini
+
+2. Anthropic models:
+   - claude-3-5-haiku-latest
+   - claude-3-5-sonnet-latest
+
+3. DeepSeek models:
+   - deepseek-chat
+
+4. Perplexity models:
+   - llama-3.1-sonar-small-128k-online (with real-time search)
+   - llama-3.1-sonar-medium-128k-online (with real-time search)
+
+Basic usage:
+```bash
+py310/bin/python ./tools/llm_api.py --prompt "your prompt" --model "model-name"
+```
+
+For Perplexity online models, you can filter search results and get images:
+```bash
+py310/bin/python ./tools/llm_api.py --prompt "your prompt" --model "llama-3.1-sonar-small-128k-online" --search-domains example.com docs.example.com --search-recency week --return-images
+```
+
+## Web browser
+
+You could use the `tools/web_scraper.py` file to scrape the web.
+```
+py310/bin/python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
+```
+This will output the content of the web pages.
+
+## Search engine
+
+You could use the `tools/search_engine.py` file to search the web.
+```
+py310/bin/python ./tools/search_engine.py "your search keywords"
+```
+This will output the search results in the following format:
+```
+URL: https://example.com
+Title: This is the title of the search result
+Snippet: This is a snippet of the search result
+```
+If needed, you can further use the `web_scraper.py` file to scrape the web page content.
+
+## Puppeteer
+
+You could use the `tools/puppeteer_tool.py` file to automate browser interactions:
+
+```bash
+py310/bin/python ./tools/puppeteer_tool.py <action> [options]
+```
+
+Available actions:
+1. navigate: Navigate to a URL
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py navigate --url "https://example.com"
+   ```
+
+2. screenshot: Take a screenshot of the page or element
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py screenshot --name output.png [--selector "#element"] [--width 800] [--height 600]
+   ```
+
+3. click: Click an element
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py click --selector "#button"
+   ```
+
+4. fill: Fill a form field
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py fill --selector "#input" --value "text"
+   ```
+
+5. select: Select an option from a dropdown
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py select --selector "#dropdown" --value "option"
+   ```
+
+6. hover: Hover over an element
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py hover --selector "#menu"
+   ```
+
+7. evaluate: Execute JavaScript code
+   ```bash
+   py310/bin/python ./tools/puppeteer_tool.py evaluate --script "document.title"
+   ```
+
+The tool supports both headless (in Docker) and headed mode, with console logging and screenshot capabilities.
+
+## SQLite
+
+You could use the `tools/sqlite_tool.py` file to interact with SQLite databases:
+
+```bash
+py310/bin/python ./tools/sqlite_tool.py <action> [options]
+```
+
+Available actions:
+1. read: Execute a SELECT query
+   ```bash
+   py310/bin/python ./tools/sqlite_tool.py read --db database.db --query "SELECT * FROM table"
+   ```
+
+2. write: Execute an INSERT, UPDATE, or DELETE query
+   ```bash
+   py310/bin/python ./tools/sqlite_tool.py write --db database.db --query "INSERT INTO table (column) VALUES ('value')"
+   ```
+
+3. create_table: Create a new table
+   ```bash
+   py310/bin/python ./tools/sqlite_tool.py create_table --db database.db --query "CREATE TABLE table (id INTEGER PRIMARY KEY, name TEXT)"
+   ```
+
+4. list_tables: Show all tables in the database
+   ```bash
+   py310/bin/python ./tools/sqlite_tool.py list_tables --db database.db
+   ```
+
+5. describe: Show schema information for a table
+   ```bash
+   py310/bin/python ./tools/sqlite_tool.py describe --db database.db --table table_name
+   ```
+
+The tool provides safe database operations with proper connection handling and error reporting.
+
+## Wikipedia
+
+You could use the `tools/wikipedia_tool.py` file to fetch content from Wikipedia:
+
+```bash
+py310/bin/python ./tools/wikipedia_tool.py <action> [options]
+```
+
+Available actions:
+1. get: Fetch content for a specific Wikipedia page
+   ```bash
+   py310/bin/python ./tools/wikipedia_tool.py get "Article Title" [--format json|text]
+   ```
+
+2. search: Search for Wikipedia articles
+   ```bash
+   py310/bin/python ./tools/wikipedia_tool.py search "Search Query" [--limit N] [--format json|text]
+   ```
+
+The tool supports both JSON and text output formats, with proper error handling and logging capabilities.
+
+# Lessons
+
+## User Specified Lessons
+
+- You have a python venv in ./py310.
+- Include info useful for debugging in the program output.
+- Read the file before you try to edit it.
+- Use LLM to perform flexible text understanding tasks. First test on a few files. After success, make it parallel.
+
+## Project Lessons
+### Code Quality Rules
+
+1. Test Coverage:
+   - Before attempting completion, always make sure that any code changes have test coverage
+   - Ensure all tests pass before submitting changes
+
+2. Git Commits:
+   - When finishing a task, always output a git commit command
+   - Include a descriptive commit message that follows conventional commit format
+
+3. Documentation:
+   - Update README.md when making significant changes, such as:
+     * Adding new features or settings
+     * Changing existing functionality
+     * Updating system requirements
+     * Adding new dependencies
+   - Include clear descriptions of new features and how to use them
+   - Keep the documentation in sync with the codebase
+   - Add examples where appropriate
+
+4. Lint Rules:
+   - Never disable any lint rules without explicit user approval
+   - If a lint rule needs to be disabled, ask the user first and explain why
+   - Prefer fixing the underlying issue over disabling the lint rule
+   - Document any approved lint rule disabling with a comment explaining the reason
+
+# Adding a New Setting
+
+To add a new setting that persists its state, follow these steps:
+
+## For All Settings
+
+1. Add the setting to ExtensionMessage.ts:
+   - Add the setting to the ExtensionState interface
+   - Make it required if it has a default value, optional if it can be undefined
+   - Example: `preferredLanguage: string`
+
+2. Add test coverage:
+   - Add the setting to mockState in ClineProvider.test.ts
+   - Add test cases for setting persistence and state updates
+   - Ensure all tests pass before submitting changes
+
+### For Checkbox Settings
+
+1. Add the message type to WebviewMessage.ts:
+   - Add the setting name to the WebviewMessage type's type union
+   - Example: `| "multisearchDiffEnabled"`
+
+2. Add the setting to ExtensionStateContext.tsx:
+   - Add the setting to the ExtensionStateContextType interface
+   - Add the setter function to the interface
+   - Add the setting to the initial state in useState
+   - Add the setting to the contextValue object
+   - Example:
+     ```typescript
+     interface ExtensionStateContextType {
+       multisearchDiffEnabled: boolean;
+       setMultisearchDiffEnabled: (value: boolean) => void;
+     }
+     ```
+
+3. Add the setting to ClineProvider.ts:
+   - Add the setting name to the GlobalStateKey type union
+   - Add the setting to the Promise.all array in getState
+   - Add the setting to the return value in getState with a default value
+   - Add the setting to the destructured variables in getStateToPostToWebview
+   - Add the setting to the return value in getStateToPostToWebview
+   - Add a case in setWebviewMessageListener to handle the setting's message type
+   - Example:
+     ```typescript
+     case "multisearchDiffEnabled":
+       await this.updateGlobalState("multisearchDiffEnabled", message.bool)
+       await this.postStateToWebview()
+       break
+     ```
+
+4. Add the checkbox UI to SettingsView.tsx:
+   - Import the setting and its setter from ExtensionStateContext
+   - Add the VSCodeCheckbox component with the setting's state and onChange handler
+   - Add appropriate labels and description text
+   - Example:
+     ```typescript
+     <VSCodeCheckbox 
+       checked={multisearchDiffEnabled} 
+       onChange={(e: any) => setMultisearchDiffEnabled(e.target.checked)}
+     >
+       <span style={{ fontWeight: "500" }}>Enable multi-search diff matching</span>
+     </VSCodeCheckbox>
+     ```
+
+5. Add the setting to handleSubmit in SettingsView.tsx:
+   - Add a vscode.postMessage call to send the setting's value when clicking Done
+   - Example:
+     ```typescript
+     vscode.postMessage({ type: "multisearchDiffEnabled", bool: multisearchDiffEnabled })
+     ```
+
+### For Select/Dropdown Settings
+
+1. Add the message type to WebviewMessage.ts:
+   - Add the setting name to the WebviewMessage type's type union
+   - Example: `| "preferredLanguage"`
+
+2. Add the setting to ExtensionStateContext.tsx:
+   - Add the setting to the ExtensionStateContextType interface
+   - Add the setter function to the interface
+   - Add the setting to the initial state in useState with a default value
+   - Add the setting to the contextValue object
+   - Example:
+     ```typescript
+     interface ExtensionStateContextType {
+       preferredLanguage: string;
+       setPreferredLanguage: (value: string) => void;
+     }
+     ```
+
+3. Add the setting to ClineProvider.ts:
+   - Add the setting name to the GlobalStateKey type union
+   - Add the setting to the Promise.all array in getState
+   - Add the setting to the return value in getState with a default value
+   - Add the setting to the destructured variables in getStateToPostToWebview
+   - Add the setting to the return value in getStateToPostToWebview
+   - Add a case in setWebviewMessageListener to handle the setting's message type
+   - Example:
+     ```typescript
+     case "preferredLanguage":
+       await this.updateGlobalState("preferredLanguage", message.text)
+       await this.postStateToWebview()
+       break
+     ```
+
+4. Add the select UI to SettingsView.tsx:
+   - Import the setting and its setter from ExtensionStateContext
+   - Add the select element with appropriate styling to match VSCode's theme
+   - Add options for the dropdown
+   - Add appropriate labels and description text
+   - Example:
+     ```typescript
+     <select
+       value={preferredLanguage}
+       onChange={(e) => setPreferredLanguage(e.target.value)}
+       style={{
+         width: "100%",
+         padding: "4px 8px",
+         backgroundColor: "var(--vscode-input-background)",
+         color: "var(--vscode-input-foreground)",
+         border: "1px solid var(--vscode-input-border)",
+         borderRadius: "2px"
+       }}>
+       <option value="English">English</option>
+       <option value="Spanish">Spanish</option>
+       ...
+     </select>
+     ```
+
+5. Add the setting to handleSubmit in SettingsView.tsx:
+   - Add a vscode.postMessage call to send the setting's value when clicking Done
+   - Example:
+     ```typescript
+     vscode.postMessage({ type: "preferredLanguage", text: preferredLanguage })
+     ```
+
+These steps ensure that:
+- The setting's state is properly typed throughout the application
+- The setting persists between sessions
+- The setting's value is properly synchronized between the webview and extension
+- The setting has a proper UI representation in the settings view
+- Test coverage is maintained for the new setting
+
+## Cursor learned
+
+- Use NPM instead of Yarn or PNPM
+- Running the build script for this project:
+  - `node esbuild.js`
+  - `npm run package`
+  - `code --extensionDevelopmentPath=$PWD .`
+- For website image paths, always use the correct relative path (e.g., 'images/filename.png') and ensure the images directory exists
+- For search results, ensure proper handling of different character encodings (UTF-8) for international queries
+- Add debug information to stderr while keeping the main output clean in stdout for better pipeline integration
+- When using seaborn styles in matplotlib, use 'seaborn-v0_8' instead of 'seaborn' as the style name due to recent seaborn version changes
+- When using Jest, a test suite can fail even if all individual tests pass, typically due to issues in suite-level setup code or lifecycle hooks
+
+
+# Scratchpad
+
+## Current Task: Simplify Web Scraper Tool
+
+### Steps:
+[X] 1. Remove Scrapingdog API dependency
+   - Remove API key requirement
+   - Remove Scrapingdog-specific options
+   - Add direct HTTP request handling
+
+[X] 2. Enhance WebScraperClient
+   - Add default User-Agent header
+   - Handle relative URLs in links
+   - Add custom headers support
+   - Configure timeout and redirects
+
+[X] 3. Build and test
+   - Update code to use direct cheerio scraping
+   - Build the extension
+   - Launch for testing
+
+### Progress:
+Completed implementation:
+1. Removed Scrapingdog API dependency:
+   - Removed API key and Scrapingdog-specific options
+   - Added direct HTTP request handling with axios
+   - Added proper headers and request configuration
+
+2. Enhanced WebScraperClient functionality:
+   - Added default User-Agent header for better compatibility
+   - Added support for custom headers
+   - Improved link handling with relative to absolute URL conversion
+   - Added timeout and redirect configuration
+
+The web_scraper tool now uses cheerio directly to scrape and clean web content, making it simpler and more maintainable without external API dependencies.

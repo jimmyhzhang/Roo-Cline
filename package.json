@@ -1,10 +1,10 @@
 {
 	"name": "roo-cline",
-	"displayName": "Roo Code (prev. Roo Cline)",
-	"description": "A VS Code plugin that enhances coding with AI-powered automation, multi-model support, and experimental features.",
-	"publisher": "RooVeterinaryInc",
+	"displayName": "Reading+AI Cline",
+	"description": "A fork of Cline, an autonomous coding agent, with some added experimental configuration and automation features.",
+	"publisher": "Reading Plus AI",
 	"version": "3.3.4",
-	"icon": "assets/icons/rocket.png",
+	"icon": "$(add)",
 	"galleryBanner": {
 		"color": "#617A91",
 		"theme": "dark"

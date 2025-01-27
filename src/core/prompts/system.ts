@@ -47,8 +47,8 @@ async function generatePrompt(
 	// If diff is disabled, don't pass the diffStrategy
 	const effectiveDiffStrategy = diffEnabled ? diffStrategy : undefined
 
-	const [mcpServersSection, modesSection] = await Promise.all([
-		getMcpServersSection(mcpHub, effectiveDiffStrategy),
+	const [modesSection] = await Promise.all([
+		//getMcpServersSection(mcpHub, effectiveDiffStrategy),
 		getModesSection(context),
 	])
 
@@ -71,8 +71,6 @@ ${getToolDescriptionsForMode(
 )}
 
 ${getToolUseGuidelinesSection()}
-
-${mcpServersSection}
 
 ${getCapabilitiesSection(cwd, supportsComputerUse, mcpHub, effectiveDiffStrategy)}
 

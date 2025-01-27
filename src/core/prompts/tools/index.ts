@@ -94,10 +94,10 @@ export {
 	getSearchFilesDescription,
 	getListFilesDescription,
 	getListCodeDefinitionNamesDescription,
-	getBrowserActionDescription,
+	// getBrowserActionDescription,
 	getAskFollowupQuestionDescription,
 	getAttemptCompletionDescription,
-	getUseMcpToolDescription,
-	getAccessMcpResourceDescription,
+	// getUseMcpToolDescription,
+	// getAccessMcpResourceDescription,
 	getSwitchModeDescription,
 }

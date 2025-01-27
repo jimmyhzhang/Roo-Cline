@@ -3,7 +3,7 @@ import cloneDeep from "clone-deep"
 import { DiffStrategy, getDiffStrategy, UnifiedDiffStrategy } from "./diff/DiffStrategy"
 import { validateToolUse, isToolAllowedForMode, ToolName } from "./mode-validator"
 import delay from "delay"
-import fs from "fs/promises"
+import fs, { writeFile } from "fs/promises"
 import os from "os"
 import pWaitFor from "p-wait-for"
 import * as path from "path"
@@ -25,6 +25,7 @@ import { UrlContentFetcher } from "../services/browser/UrlContentFetcher"
 import { listFiles } from "../services/glob/list-files"
 import { regexSearchFiles } from "../services/ripgrep"
 import { parseSourceCodeForDefinitionsTopLevel } from "../services/tree-sitter"
+import { PerplexityClient } from "../services/perplexity/PerplexityClient"
 import { ApiConfiguration } from "../shared/api"
 import { findLastIndex } from "../shared/array"
 import { combineApiRequests } from "../shared/combineApiRequests"
@@ -60,6 +61,8 @@ import { BrowserSession } from "../services/browser/BrowserSession"
 import { OpenRouterHandler } from "../api/providers/openrouter"
 import { McpHub } from "../services/mcp/McpHub"
 import crypto from "crypto"
+import { FinancialModelingPrepClient } from "../services/fmp/FinancialModelingPrepClient"
+import { AnalyzeStockClient } from "../services/analyze/AnalyzeStockClient"
 
 const cwd =
 	vscode.workspace.workspaceFolders?.map((folder) => folder.uri.fsPath).at(0) ?? path.join(os.homedir(), "Desktop") // may or may not exist but fs checking existence would immediately ask for permission which would be bad UX, need to come up with a better solution
@@ -75,6 +78,7 @@ export class Cline {
 	private terminalManager: TerminalManager
 	private urlContentFetcher: UrlContentFetcher
 	private browserSession: BrowserSession
+	private perplexityClient: PerplexityClient
 	private didEditFile: boolean = false
 	customInstructions?: string
 	diffStrategy?: DiffStrategy
@@ -94,6 +98,7 @@ export class Cline {
 	didFinishAborting = false
 	abandoned = false
 	private diffViewProvider: DiffViewProvider
+	private analyzeStockClient: AnalyzeStockClient
 
 	// streaming
 	private currentStreamingContentIndex = 0
@@ -131,7 +136,8 @@ export class Cline {
 		this.fuzzyMatchThreshold = fuzzyMatchThreshold ?? 1.0
 		this.providerRef = new WeakRef(provider)
 		this.diffViewProvider = new DiffViewProvider(cwd)
-
+		this.perplexityClient = new PerplexityClient()
+		this.analyzeStockClient = new AnalyzeStockClient(cwd, process.env.ANTHROPIC_API_KEY || "")
 		if (historyItem) {
 			this.taskId = historyItem.id
 		}
@@ -833,6 +839,8 @@ export class Cline {
 			)
 		})()
 
+		//await writeFile(path.join(cwd, 'system_prompt.txt'), systemPrompt)
+
 		// If the previous API request's total token usage is close to the context window, truncate the conversation history to free up space for the new request
 		if (previousApiReqIndex >= 0) {
 			const previousRequest = this.clineMessages[previousApiReqIndex]
@@ -1024,6 +1032,12 @@ export class Cline {
 							return `[${block.name}]`
 						case "switch_mode":
 							return `[${block.name} to '${block.params.mode_slug}'${block.params.reason ? ` because: ${block.params.reason}` : ""}]`
+						case "web_search":
+							return `[${block.name} for '${block.params.query}']`
+						case "fetch_financial_data":
+							return `[${block.name} for '${block.params.symbols}']`
+						case "analyze_stocks":
+							return `[${block.name} for analysis]`
 					}
 				}
 
@@ -2211,6 +2225,182 @@ export class Cline {
 							break
 						}
 					}
+					case "web_search": {
+						const query: string | undefined = block.params.query
+						const searchDomains: string[] | undefined = block.params.search_domains
+							? JSON.parse(block.params.search_domains)
+							: undefined
+						const searchRecency: "month" | "week" | "day" | "hour" | undefined = block.params
+							.search_recency as "month" | "week" | "day" | "hour" | undefined
+						const returnImages: boolean | undefined = block.params.return_images === "true"
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "webSearch",
+									query: removeClosingTag("query", query),
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!query) {
+									this.consecutiveMistakeCount++
+									pushToolResult(await this.sayAndCreateMissingParamError("web_search", "query"))
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "webSearch",
+									query,
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const searchResult = await this.perplexityClient.search(query, {
+									searchDomains,
+									searchRecency,
+									returnImages,
+								})
+
+								pushToolResult(formatResponse.toolResult(searchResult))
+								break
+							}
+						} catch (error) {
+							await handleError("performing web search", error)
+							break
+						}
+					}
+					case "fetch_financial_data": {
+						const symbols: string | undefined = block.params.symbols
+						const datasets: string | undefined = block.params.datasets
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "fetchFinancialData",
+									symbols: removeClosingTag("symbols", symbols),
+									datasets: removeClosingTag("datasets", datasets),
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!symbols) {
+									this.consecutiveMistakeCount++
+									pushToolResult(
+										await this.sayAndCreateMissingParamError("fetch_financial_data", "symbols"),
+									)
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "fetchFinancialData",
+									symbols,
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const fmpClient = new FinancialModelingPrepClient(
+									process.env.FMP_API_KEY || "FAFIe7OhSVEe0JKy1xMLqoXtGZVJ6Tvt",
+								)
+
+								// Split and clean symbols
+								const symbolList = symbols.split(",").map((s) => s.trim())
+
+								// Get company profiles
+								const profiles = await Promise.all(
+									symbolList.map((symbol) => fmpClient.getCompanyProfile(symbol)),
+								)
+								let output =
+									"=== Company Profiles ===\n" +
+									fmpClient.formatFinancialData(profiles.flat(), "Company Profile")
+
+								// Get financial statements if date range is provided
+								// if (dateFrom && dateTo) {
+								const [incomeGrowth, ratiosTTM, keyMetricsTTM] = await Promise.all([
+									Promise.all(symbolList.map((symbol) => fmpClient.getIncomeStatementGrowth(symbol))),
+									Promise.all(symbolList.map((symbol) => fmpClient.getFinancialRatiosTTM(symbol))),
+									Promise.all(symbolList.map((symbol) => fmpClient.getKeyMetricsTTM(symbol))),
+								])
+
+								output += "\n=== Financial Statements ===\n"
+								// output += fmpClient.formatFinancialData(incomeStatements.flat(), "Income Statement")
+								// output += fmpClient.formatFinancialData(balanceSheets.flat(), "Balance Sheet")
+								// output += fmpClient.formatFinancialData(cashFlows.flat(), "Cash Flow")
+								// output += fmpClient.formatFinancialData(ratios.flat(), "Financial Ratios")
+								// output += fmpClient.formatFinancialData(keyMetrics.flat(), "Key Metrics")
+								output += fmpClient.formatFinancialData(incomeGrowth.flat(), "Income Statement Growth")
+								output += fmpClient.formatFinancialData(keyMetricsTTM.flat(), "Key Metrics")
+								output += fmpClient.formatFinancialData(ratiosTTM.flat(), "Financial Ratios")
+								// }
+
+								pushToolResult(formatResponse.toolResult(output))
+								break
+							}
+						} catch (error) {
+							await handleError("fetching financial data", error)
+							break
+						}
+					}
+					case "analyze_stocks": {
+						const financialData: string | undefined = block.params.financial_data
+						const webSearchData: string | undefined = block.params.web_search_data
+
+						try {
+							if (block.partial) {
+								const partialMessage = JSON.stringify({
+									tool: "analyzeStocks",
+								} satisfies ClineSayTool)
+								await this.ask("tool", partialMessage, block.partial).catch(() => {})
+								break
+							} else {
+								if (!financialData) {
+									this.consecutiveMistakeCount++
+									pushToolResult(
+										await this.sayAndCreateMissingParamError("analyze_stocks", "financial_data"),
+									)
+									break
+								}
+								if (!webSearchData) {
+									this.consecutiveMistakeCount++
+									pushToolResult(
+										await this.sayAndCreateMissingParamError("analyze_stocks", "web_search_data"),
+									)
+									break
+								}
+
+								this.consecutiveMistakeCount = 0
+								const completeMessage = JSON.stringify({
+									tool: "analyzeStocks",
+								} satisfies ClineSayTool)
+
+								const didApprove = await askApproval("tool", completeMessage)
+								if (!didApprove) {
+									break
+								}
+
+								const result = await this.analyzeStockClient.analyze(financialData, webSearchData)
+
+								pushToolResult(
+									formatResponse.toolResult(
+										`Analysis Results:\n\n${result.analysis}\n\nKey Metrics:\n${JSON.stringify(result.metrics, null, 2)}`,
+										result.plots,
+									),
+								)
+								break
+							}
+						} catch (error) {
+							await handleError("analyzing stocks", error)
+							break
+						}
+					}
 				}
 				break
 		}
@@ -2288,10 +2478,10 @@ export class Cline {
 			}),
 		)
 
-		const [parsedUserContent, environmentDetails] = await this.loadContext(userContent, includeFileDetails)
+		const [parsedUserContent] = await this.loadContext(userContent, includeFileDetails)
 		userContent = parsedUserContent
 		// add environment details as its own text block, separate from tool results
-		userContent.push({ type: "text", text: environmentDetails })
+		// userContent.push({ type: "text", text: environmentDetails })
 
 		await this.addToApiConversationHistory({ role: "user", content: userContent })
 
@@ -2579,7 +2769,7 @@ export class Cline {
 					return block
 				}),
 			),
-			this.getEnvironmentDetails(includeFileDetails),
+			//this.getEnvironmentDetails(includeFileDetails),
 		])
 	}
 

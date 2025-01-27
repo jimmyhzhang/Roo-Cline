@@ -22,6 +22,9 @@ export const toolUseNames = [
 	"ask_followup_question",
 	"attempt_completion",
 	"switch_mode",
+	"web_search",
+	"fetch_financial_data",
+	"analyze_stocks",
 ] as const
 
 // Converts array of tool call names into a union type ("execute_command" | "read_file" | ...)
@@ -50,6 +53,17 @@ export const toolParamNames = [
 	"end_line",
 	"mode_slug",
 	"reason",
+	"query",
+	"search_domains",
+	"search_recency",
+	"return_images",
+	"symbols",
+	"exchange",
+	"date_from",
+	"date_to",
+	"financial_data",
+	"web_search_data",
+	"datasets",
 ] as const
 
 export type ToolParamName = (typeof toolParamNames)[number]
@@ -121,4 +135,21 @@ export interface AttemptCompletionToolUse extends ToolUse {
 export interface SwitchModeToolUse extends ToolUse {
 	name: "switch_mode"
 	params: Partial<Pick<Record<ToolParamName, string>, "mode_slug" | "reason">>
+}
+
+export interface WebSearchToolUse extends ToolUse {
+	name: "web_search"
+	params: Partial<
+		Pick<Record<ToolParamName, string>, "query" | "search_domains" | "search_recency" | "return_images">
+	>
+}
+
+export interface FetchFinancialDataToolUse extends ToolUse {
+	name: "fetch_financial_data"
+	params: Partial<Pick<Record<ToolParamName, string>, "symbols" | "exchange" | "date_from" | "date_to">>
+}
+
+export interface AnalyzeStocksToolUse extends ToolUse {
+	name: "analyze_stocks"
+	params: Partial<Pick<Record<ToolParamName, string>, "financial_data" | "web_search_data">>
 }

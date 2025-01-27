@@ -426,6 +426,32 @@ export const ChatRowContent = ({
 						/>
 					</>
 				)
+			case "fetchFinancialData":
+				return (
+					<>
+						<div style={headerStyle}>
+							{toolIcon("graph")}
+							<span style={{ fontWeight: "bold" }}>
+								{message.type === "ask" ? (
+									<>
+										Cline wants to fetch financial data for <code>{tool.symbols}</code>:
+									</>
+								) : (
+									<>
+										Cline fetched financial data for <code>{tool.symbols}</code>:
+									</>
+								)}
+							</span>
+						</div>
+						<CodeAccordian
+							code={tool.content!}
+							path={`Financial Data (${tool.symbols})`}
+							language="plaintext"
+							isExpanded={isExpanded}
+							onToggleExpand={onToggleExpand}
+						/>
+					</>
+				)
 			// case "inspectSite":
 			// 	const isInspecting =
 			// 		isLast && lastModifiedMessage?.say === "inspect_site_result" && !lastModifiedMessage?.images

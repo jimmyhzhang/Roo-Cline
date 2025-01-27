@@ -9,7 +9,7 @@ export function getCapabilitiesSection(
 ): string {
 	return `====
 
-CAPABILITIES
+## CAPABILITIES
 
 - You have access to tools that let you execute CLI commands on the user's computer, list files, view source code definitions, regex search${
 		supportsComputerUse ? ", use the browser" : ""

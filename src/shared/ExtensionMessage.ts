@@ -169,13 +169,19 @@ export interface ClineSayTool {
 		| "listCodeDefinitionNames"
 		| "searchFiles"
 		| "switchMode"
+		| "webSearch"
+		| "fetchFinancialData"
+		| "analyzeStocks"
 	path?: string
-	diff?: string
 	content?: string
+	diff?: string
 	regex?: string
 	filePattern?: string
 	mode?: string
 	reason?: string
+	query?: string
+	symbols?: string
+	datasets?: string
 }
 
 // must keep in sync with system prompt
