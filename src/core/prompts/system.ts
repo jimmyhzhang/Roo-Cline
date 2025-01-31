@@ -325,7 +325,7 @@ Your final result description here
 - To visualize portfolio, please show visualizations like risk vs. return, risk factors and portfolio composition, and other relevant visualizations.
 - use Plotly.js to generate plenty of visualizations. please provide a short paragraph for each visualization to explain what it is about.
 - for each point of the report, please provide several paragraphs to explain the reasoning behind the point, please be very detailed and always use the original data to support the point. 
-
+- when investing, you should always consider the stock that has extreme high return (e.g >100% return in past 12 month) as a worse choice
 ====
 
 ## RULES
